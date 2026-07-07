@@ -15,7 +15,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
+// Uso de Selenium
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Pruebas de Integración Frontend (E2E) - Selenium WebDriver")
 public class FrontendE2ETest {
