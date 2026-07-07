@@ -2,6 +2,7 @@ package com.hospital.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // IMPORTANTE
 
 @Entity
 @Table(name = "historias_clinicas")
@@ -13,10 +14,12 @@ public class HistoriaClinica {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "paciente_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // Corrección para evitar Error 500
     private Paciente paciente;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "doctor_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // Corrección para evitar Error 500
     private Doctor doctor;
 
     @Column(name = "fecha_creacion")
