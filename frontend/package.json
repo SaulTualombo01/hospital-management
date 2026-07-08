@@ -1,0 +1,20 @@
+{
+  "name": "hospital-management-frontend",
+  "private": true,
+  "scripts": {
+    "test": "jest --runInBand"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "roots": [
+      "<rootDir>/js"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  }
+}

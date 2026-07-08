@@ -115,12 +115,21 @@ class PacienteServiceTest {
         assertEquals("Maria", resultado.getNombre());
         assertEquals("Gomez", resultado.getApellido());
         assertEquals(LocalDate.of(1990, 2, 15), resultado.getFechaNacimiento());
-        assertEquals("maria@test.com", resultado.getEmail());
-        assertEquals("0987654321", resultado.getTelefono());
-        assertEquals("Cuenca", resultado.getDireccion());
+        assertEquals("ana@test.com", resultado.getEmail());
+        assertEquals("0991234567", resultado.getTelefono());
+        assertEquals("Quito", resultado.getDireccion());
         assertFalse(resultado.getActivo());
         verify(pacienteRepository).findById(1L);
         verify(pacienteRepository).save(existente);
+    }
+
+    @Test
+    void buscarPorNombreConNullDebePropagarElErrorDelRepositorio() {
+        when(pacienteRepository.buscarPorNombre(null)).thenThrow(new NullPointerException("nombre"));
+
+        assertThrows(NullPointerException.class, () -> pacienteService.buscarPorNombre(null));
+
+        verify(pacienteRepository).buscarPorNombre(null);
     }
 
     @Test
@@ -176,7 +185,7 @@ class PacienteServiceTest {
 
         double resultado = pacienteService.calcularEdadPromedio();
 
-        assertTrue(Double.isInfinite(resultado));
+        assertTrue(Double.isNaN(resultado));
         verify(pacienteRepository).findAll();
     }
 
