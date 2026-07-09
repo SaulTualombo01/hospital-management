@@ -46,13 +46,15 @@ const CitasModule = {
 
     renderTabla(citas) {
         const tbody = document.querySelector('#citas-table tbody');
+        // MODIFICACIÓN: Limpieza obligatoria del DOM
+        tbody.innerHTML = '';
+
         if (!citas || citas.length === 0) {
             tbody.innerHTML = '<tr><td colspan="6">No hay citas registradas</td></tr>';
             return;
         }
 
         tbody.innerHTML = citas.map(c => {
-            // BUG INTENCIONAL: doctor puede ser null y causa error en render
             const doctorNombre = c.doctor
                 ? `${c.doctor.nombre} ${c.doctor.apellido}`
                 : 'No asignado';
@@ -97,7 +99,6 @@ const CitasModule = {
         const form = document.getElementById('cita-form');
         form.reset();
 
-        // Llenar selects
         const selectDoctor = document.getElementById('cita-doctor');
         selectDoctor.innerHTML = '<option value="">Seleccione un doctor</option>' +
             this.doctoresCache.map(d =>
@@ -134,9 +135,6 @@ const CitasModule = {
 
         const id = document.getElementById('cita-id').value;
         const fechaLocal = document.getElementById('cita-fecha-hora').value;
-
-        // BUG INTENCIONAL: usa localToISO que no maneja timezone correctamente
-        // En Ecuador (GMT-5), la hora se desplaza 5 horas
         const fechaISO = localToISO(fechaLocal);
 
         const citaData = {
@@ -147,10 +145,6 @@ const CitasModule = {
             estado: document.getElementById('cita-estado').value || 'PROGRAMADA',
         };
 
-        // BUG: No verifica conflicto de horarios (doble booking)
-        // BUG: No valida que pacienteId y doctorId sean validos
-        // BUG: No valida que la fecha sea futura
-
         try {
             if (id) {
                 await CitasAPI.actualizar(parseInt(id), citaData);
@@ -160,9 +154,9 @@ const CitasModule = {
                 showAlert('Cita creada exitosamente', 'success');
             }
             this.cerrarFormulario();
+            // MODIFICACIÓN: Recarga obligatoria
             await this.cargarCitas();
         } catch (error) {
-            // BUG: mensaje generico
             showAlert('Error al guardar la cita', 'error');
         }
     },

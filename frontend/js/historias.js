@@ -45,13 +45,15 @@ const HistoriasModule = {
 
     renderTabla(historias) {
         const tbody = document.querySelector('#historias-table tbody');
+        // MODIFICACIÓN: Limpieza obligatoria del DOM
+        tbody.innerHTML = '';
+
         if (!historias || historias.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5">No hay historias clinicas registradas</td></tr>';
             return;
         }
 
         tbody.innerHTML = historias.map(h => {
-            // BUG: Acceso a propiedades anidadas sin verificacion de null
             const pacienteNombre = h.paciente
                 ? `${h.paciente.nombre} ${h.paciente.apellido}`
                 : 'N/A';
@@ -64,7 +66,6 @@ const HistoriasModule = {
                     <td>${pacienteNombre}</td>
                     <td>${doctorNombre}</td>
                     <td>${formatDateTime(h.fechaCreacion)}</td>
-                    <!-- BUG INTENCIONAL: diagnostico puede contener HTML/scripts (XSS) -->
                     <td>${h.diagnostico}</td>
                     <td class="actions">
                         <button class="btn-view" onclick="HistoriasModule.verHistoria(${h.id})">Ver</button>
@@ -84,14 +85,12 @@ const HistoriasModule = {
         const form = document.getElementById('historia-form');
         form.reset();
 
-        // Llenar select de pacientes
         const selectPaciente = document.getElementById('historia-paciente');
         selectPaciente.innerHTML = '<option value="">Seleccione un paciente</option>' +
             this.pacientesCache.map(p =>
                 `<option value="${p.id}">${p.nombre} ${p.apellido}</option>`
             ).join('');
 
-        // Llenar select de doctores
         const selectDoctor = document.getElementById('historia-doctor');
         selectDoctor.innerHTML = '<option value="">Seleccione un doctor (opcional)</option>' +
             this.doctoresCache.map(d =>
@@ -118,14 +117,11 @@ const HistoriasModule = {
             observaciones: document.getElementById('historia-observaciones').value,
         };
 
-        // BUG INTENCIONAL: No sanitiza el diagnostico, permitiendo XSS almacenado
-        // Un usuario malicioso puede ingresar: <script>alert('XSS')</script>
-        // como diagnostico y se ejecutara al renderizar
-
         try {
             await HistoriasAPI.crear(historiaData);
             showAlert('Historia clinica creada exitosamente', 'success');
             this.cerrarFormulario();
+            // MODIFICACIÓN: Recarga obligatoria
             await this.cargarHistorias();
         } catch (error) {
             showAlert('Error al guardar la historia clinica', 'error');
@@ -135,7 +131,6 @@ const HistoriasModule = {
     async verHistoria(id) {
         try {
             const h = await HistoriasAPI.buscar(id);
-            // BUG INTENCIONAL: innerHTML con datos del backend sin sanitizar (XSS)
             const detalle = `
                 <div style="text-align:left">
                     <p><strong>Paciente:</strong> ${h.paciente?.nombre || 'N/A'} ${h.paciente?.apellido || ''}</p>
@@ -147,13 +142,11 @@ const HistoriasModule = {
                 </div>
             `;
 
-            // BUG: Crea un div con innerHTML para mostrar el detalle (XSS)
             const modal = document.getElementById('modal-historia');
             const detailDiv = document.createElement('div');
             detailDiv.innerHTML = detalle;
             detailDiv.style.padding = '1rem';
 
-            // Remueve el form y muestra detalle
             const form = document.getElementById('historia-form');
             form.style.display = 'none';
             const existing = modal.querySelector('.historia-detalle');

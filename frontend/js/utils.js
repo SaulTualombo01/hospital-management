@@ -124,3 +124,7 @@ function localToISO(localDateTime) {
     // En Ecuador (GMT-5) hay una diferencia de 5 horas
     return new Date(localDateTime).toISOString();
 }
+// Este bloque únicamente se agrega para que jest pueda leer las pruebas de utils.js
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { formatDate, formatDateTime, escapeHTML, showAlert, validateEmail, validateTelefono, isFutureDate, localToISO }; // Ajustar variables según el archivo
+}

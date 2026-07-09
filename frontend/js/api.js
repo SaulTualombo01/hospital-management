@@ -144,3 +144,7 @@ const HistoriasAPI = {
 
     porDoctor: (doctorId) => apiFetch(`/historias-clinicas/doctor/${doctorId}`),
 };
+// Este bloque únicamente se agrega para que jest pueda leer las pruebas de api.js
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { PacientesAPI, DoctoresAPI, CitasAPI, HistoriasAPI };
+}

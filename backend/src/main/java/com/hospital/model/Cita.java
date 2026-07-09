@@ -2,6 +2,7 @@ package com.hospital.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "citas")
@@ -11,14 +12,21 @@ public class Cita {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // BUG INTENCIONAL: relacion sin @ManyToOne con FK explícita
-    // Solo se mapea como columna, permitiendo IDs de pacientes inexistentes
+    // Mantenemos el campo que tus otras clases esperan
     @Column(name = "paciente_id", nullable = false)
     private Long pacienteId;
 
-    // Esta si tiene la relacion correcta
+    // Añadimos la relación opcional para satisfacer la Foreign Key de la BD
+    // insertable = false, updatable = false permite que la relación exista
+    // sin romper tu lógica actual de usar pacienteId
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "paciente_id", insertable = false, updatable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Paciente paciente;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "doctor_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Doctor doctor;
 
     @Column(name = "fecha_hora", nullable = false)
@@ -47,6 +55,9 @@ public class Cita {
 
     public Long getPacienteId() { return pacienteId; }
     public void setPacienteId(Long pacienteId) { this.pacienteId = pacienteId; }
+
+    public Paciente getPaciente() { return paciente; }
+    public void setPaciente(Paciente paciente) { this.paciente = paciente; }
 
     public Doctor getDoctor() { return doctor; }
     public void setDoctor(Doctor doctor) { this.doctor = doctor; }
