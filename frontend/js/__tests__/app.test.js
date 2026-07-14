@@ -7,6 +7,11 @@ describe('App', () => {
   let CitasAPI;
 
   beforeEach(() => {
+    // CORRECCIÓN CLAVE 1: Activar el tiempo falso ANTES de cargar el script
+    // Así, cualquier variable global en app.js que use new Date() tomará esta fecha.
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-07-08T12:00:00Z'));
+
     document.body.innerHTML = `
       <button class="nav-btn active" data-section="dashboard">Dashboard</button>
       <button class="nav-btn" data-section="pacientes">Pacientes</button>
@@ -26,10 +31,12 @@ describe('App', () => {
       <div id="stat-edad-promedio"></div>
     `;
 
-    global.PacientesModule = { init: jest.fn().mockResolvedValue() };
-    global.DoctoresModule = { init: jest.fn().mockResolvedValue() };
-    global.CitasModule = { init: jest.fn().mockResolvedValue() };
-    global.HistoriasModule = { init: jest.fn().mockResolvedValue() };
+    // CORRECCIÓN CLAVE 2: Usamos notación de corchetes para evitar la advertencia
+    // roja de IntelliJ sobre la reasignación de constantes.
+    global['PacientesModule'] = { init: jest.fn().mockResolvedValue() };
+    global['DoctoresModule'] = { init: jest.fn().mockResolvedValue() };
+    global['CitasModule'] = { init: jest.fn().mockResolvedValue() };
+    global['HistoriasModule'] = { init: jest.fn().mockResolvedValue() };
 
     PacientesAPI = {
       listar: jest.fn().mockResolvedValue([{ id: 1 }, { id: 2 }]),
@@ -49,13 +56,18 @@ describe('App', () => {
       PacientesAPI,
       DoctoresAPI,
       CitasAPI,
-      PacientesModule: global.PacientesModule,
-      DoctoresModule: global.DoctoresModule,
-      CitasModule: global.CitasModule,
-      HistoriasModule: global.HistoriasModule,
+      PacientesModule: global['PacientesModule'],
+      DoctoresModule: global['DoctoresModule'],
+      CitasModule: global['CitasModule'],
+      HistoriasModule: global['HistoriasModule'],
     });
 
     App = loaded.App;
+  });
+
+  // Limpieza vital: restaurar el reloj real después de cada prueba
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   test('init llama setupNavigation y carga el dashboard', async () => {
@@ -76,13 +88,11 @@ describe('App', () => {
     expect(App.currentSection).toBe('pacientes');
     expect(document.querySelector('[data-section="pacientes"]').classList.contains('active')).toBe(true);
     expect(document.querySelector('#section-pacientes').classList.contains('active')).toBe(true);
-    expect(global.PacientesModule.init).toHaveBeenCalled();
+    expect(global['PacientesModule'].init).toHaveBeenCalled();
   });
 
   test('cargarDashboard actualiza las estadisticas con los datos recibidos', async () => {
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2026-07-08T12:00:00Z'));
-
+    // Ya no encendemos el fakeTimer aquí porque se encendió en el beforeEach
     await App.cargarDashboard();
 
     expect(PacientesAPI.listar).toHaveBeenCalled();

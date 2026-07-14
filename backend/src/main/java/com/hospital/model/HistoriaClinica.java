@@ -2,24 +2,31 @@ package com.hospital.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // IMPORTANTE
 
 @Entity
 @Table(name = "historias_clinicas")
 public class HistoriaClinica {
-
+    /* =========================================================================
+     * BUG 2: EL PROBLEMA DEL "DATO FANTASMA"
+     * =========================================================================
+     * Para ahorrar memoria, el servidor no carga toda la información del paciente
+     * de golpe, sino que crea un dato "fantasma" temporal (FetchType.LAZY).
+     * El problema es que, cuando el servidor intenta empaquetar esa información
+     * en texto (JSON) para enviarla al navegador, el empaquetador choca con ese
+     * fantasma, no sabe cómo leerlo y hace colapsar la aplicación. Se soluciona
+     * añadiendo una etiqueta (@JsonIgnoreProperties) que le dice al empaquetador
+     * que simplemente ignore esas partes confusas.
+     * ========================================================================= */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "paciente_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // Corrección para evitar Error 500
     private Paciente paciente;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "doctor_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"}) // Corrección para evitar Error 500
     private Doctor doctor;
 
     @Column(name = "fecha_creacion")
