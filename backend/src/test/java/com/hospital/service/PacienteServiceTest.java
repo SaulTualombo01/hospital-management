@@ -12,15 +12,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,8 +34,8 @@ class PacienteServiceTest {
     @Test
     void listarTodosDebeRetornarLaListaDelRepositorio() {
         List<Paciente> pacientes = List.of(
-                crearPaciente("Ana", "Lopez", LocalDate.of(1995, 1, 10)),
-                crearPaciente("Carlos", "Perez", LocalDate.of(1988, 5, 20))
+                crearPaciente("Ana", "Lopez", LocalDate.of(1995, Month.JANUARY, 10)),
+                crearPaciente("Carlos", "Perez", LocalDate.of(1988, Month.MAY, 20))
         );
 
         when(pacienteRepository.findAll()).thenReturn(pacientes);
@@ -53,7 +50,7 @@ class PacienteServiceTest {
 
     @Test
     void buscarPorIdDebeRetornarPacienteCuandoExiste() {
-        Paciente paciente = crearPaciente("Ana", "Lopez", LocalDate.of(1995, 1, 10));
+        Paciente paciente = crearPaciente("Ana", "Lopez", LocalDate.of(1995, Month.JANUARY, 10));
         when(pacienteRepository.findById(1L)).thenReturn(Optional.of(paciente));
 
         Paciente resultado = pacienteService.buscarPorId(1L);
@@ -78,8 +75,8 @@ class PacienteServiceTest {
 
     @Test
     void crearDebeConvertirDtoYGuardarPaciente() {
-        PacienteDTO dto = crearDto("Ana", "Lopez", LocalDate.of(1995, 1, 10));
-        Paciente pacienteGuardado = crearPaciente("Ana", "Lopez", LocalDate.of(1995, 1, 10));
+        PacienteDTO dto = crearDto("Ana", "Lopez", LocalDate.of(1995, Month.JANUARY, 10));
+        Paciente pacienteGuardado = crearPaciente("Ana", "Lopez", LocalDate.of(1995, Month.JANUARY, 10));
         when(pacienteRepository.save(any(Paciente.class))).thenReturn(pacienteGuardado);
 
         Paciente resultado = pacienteService.crear(dto);
@@ -90,7 +87,7 @@ class PacienteServiceTest {
         Paciente enviadoAlRepositorio = captor.getValue();
         assertEquals("Ana", enviadoAlRepositorio.getNombre());
         assertEquals("Lopez", enviadoAlRepositorio.getApellido());
-        assertEquals(LocalDate.of(1995, 1, 10), enviadoAlRepositorio.getFechaNacimiento());
+        assertEquals(LocalDate.of(1995, Month.JANUARY, 10), enviadoAlRepositorio.getFechaNacimiento());
         assertEquals("ana@test.com", enviadoAlRepositorio.getEmail());
         assertEquals("0991234567", enviadoAlRepositorio.getTelefono());
         assertEquals("Quito", enviadoAlRepositorio.getDireccion());
@@ -101,10 +98,10 @@ class PacienteServiceTest {
 
     @Test
     void actualizarDebeModificarCamposYGuardarPaciente() {
-        Paciente existente = crearPaciente("Ana", "Lopez", LocalDate.of(1995, 1, 10));
+        Paciente existente = crearPaciente("Ana", "Lopez", LocalDate.of(1995, Month.JANUARY, 10));
         existente.setActivo(true);
 
-        PacienteDTO dto = crearDto("Maria", "Gomez", LocalDate.of(1990, 2, 15));
+        PacienteDTO dto = crearDto("Maria", "Gomez", LocalDate.of(1990, Month.FEBRUARY, 15));
         dto.setActivo(false);
 
         when(pacienteRepository.findById(1L)).thenReturn(Optional.of(existente));
@@ -114,7 +111,7 @@ class PacienteServiceTest {
 
         assertEquals("Maria", resultado.getNombre());
         assertEquals("Gomez", resultado.getApellido());
-        assertEquals(LocalDate.of(1990, 2, 15), resultado.getFechaNacimiento());
+        assertEquals(LocalDate.of(1990, Month.FEBRUARY, 15), resultado.getFechaNacimiento());
         assertEquals("ana@test.com", resultado.getEmail());
         assertEquals("0991234567", resultado.getTelefono());
         assertEquals("Quito", resultado.getDireccion());
@@ -134,7 +131,7 @@ class PacienteServiceTest {
 
     @Test
     void eliminarDebeBuscarYEliminarPaciente() {
-        Paciente paciente = crearPaciente("Ana", "Lopez", LocalDate.of(1995, 1, 10));
+        Paciente paciente = crearPaciente("Ana", "Lopez", LocalDate.of(1995, Month.JANUARY, 10));
         when(pacienteRepository.findById(1L)).thenReturn(Optional.of(paciente));
 
         pacienteService.eliminar(1L);
@@ -145,7 +142,7 @@ class PacienteServiceTest {
 
     @Test
     void buscarPorNombreDebeDelegarEnRepositorio() {
-        List<Paciente> pacientes = List.of(crearPaciente("Ana", "Lopez", LocalDate.of(1995, 1, 10)));
+        List<Paciente> pacientes = List.of(crearPaciente("Ana", "Lopez", LocalDate.of(1995, Month.JANUARY, 10)));
         when(pacienteRepository.buscarPorNombre("Ana")).thenReturn(pacientes);
 
         List<Paciente> resultado = pacienteService.buscarPorNombre("Ana");
@@ -157,7 +154,7 @@ class PacienteServiceTest {
 
     @Test
     void buscarPorEmailDebeDelegarEnRepositorio() {
-        Paciente paciente = crearPaciente("Ana", "Lopez", LocalDate.of(1995, 1, 10));
+        Paciente paciente = crearPaciente("Ana", "Lopez", LocalDate.of(1995, Month.JANUARY, 10));
         when(pacienteRepository.findByEmail("ana@test.com")).thenReturn(paciente);
 
         Paciente resultado = pacienteService.buscarPorEmail("ana@test.com");

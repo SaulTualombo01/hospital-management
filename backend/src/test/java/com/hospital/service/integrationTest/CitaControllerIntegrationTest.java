@@ -21,11 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.format.DateTimeFormatter;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -64,7 +66,7 @@ class CitaControllerIntegrationTest {
                 new Doctor("Felipe", "Rios", "Cardiologia", "felipe.rios@hospital.com", "0991230000", "C-101"));
 
         paciente = pacienteRepository.save(
-                new Paciente("Sofia", "Mora", LocalDate.of(1993, 4, 12),
+                new Paciente("Sofia", "Mora", LocalDate.of(1993, Month.APRIL, 12),
                         "sofia.mora@example.com", "0991112222", "Quito"));
 
         dtoValido = new CitaDTO();

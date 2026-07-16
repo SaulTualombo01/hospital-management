@@ -7,7 +7,6 @@ import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -18,11 +17,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Pruebas de Integración Frontend (E2E) - Selenium WebDriver")
-public class FrontendE2ETest {
+class FrontendE2ETest {
 
+    private static final String FRONTEND_URL =
+            "http://localhost:3000/index.html";
     private WebDriver driver;
     private WebDriverWait wait;
-    private final String FRONTEND_URL = "http://localhost:3000/index.html";
 
     @BeforeAll
     static void setupClass() {
@@ -31,15 +31,23 @@ public class FrontendE2ETest {
 
     @BeforeEach
     void setUp() {
-        ChromeOptions options = new ChromeOptions();
-        // options.addArguments("--headless");
-        driver = new ChromeDriver(options);
+        driver = new ChromeDriver();
         driver.manage().window().maximize();
-        wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+
+        wait = new WebDriverWait(
+                driver,
+                Duration.ofSeconds(15)
+        );
+
         driver.get(FRONTEND_URL);
 
-        // Garantizar que la SPA haya inicializado
-        wait.until(ExpectedConditions.not(ExpectedConditions.textToBe(By.id("stat-total-pacientes"), "—")));
+        // Espera hasta que la aplicación haya cargado los datos.
+        wait.until(ExpectedConditions.not(
+                ExpectedConditions.textToBe(
+                        By.id("stat-total-pacientes"),
+                        "-"
+                )
+        ));
     }
 
     @AfterEach

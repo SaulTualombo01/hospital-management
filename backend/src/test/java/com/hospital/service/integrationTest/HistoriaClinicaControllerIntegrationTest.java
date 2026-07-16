@@ -20,10 +20,15 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Month;
+import java.util.List;
 
 import static org.hamcrest.Matchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
 @SpringBootTest
@@ -58,7 +63,7 @@ class HistoriaClinicaControllerIntegrationTest {
         doctorRepository.deleteAll();
 
         paciente = pacienteRepository.save(
-                new Paciente("Camila", "Ortiz", LocalDate.of(1990, 6, 15),
+                new Paciente("Camila", "Ortiz", LocalDate.of(1990, Month.JUNE, 15),
                         "camila.ortiz@example.com", "0991230000", "Quito"));
 
         doctor = doctorRepository.save(
@@ -180,17 +185,44 @@ class HistoriaClinicaControllerIntegrationTest {
     @Test
     @DisplayName("GET /api/historias-clinicas - varias historias - retorna todas ordenadas por fecha desc (bug: sin paginacion)")
     void listar_variasHistorias_retornaOrdenDescendente() throws Exception {
-        HistoriaClinica primera = historiaRepository.save(
-                new HistoriaClinica(paciente, doctor, "Diagnostico antiguo", null, null));
-        Thread.sleep(10); // asegura una fechaCreacion distinta y posterior
-        HistoriaClinica segunda = historiaRepository.save(
-                new HistoriaClinica(paciente, doctor, "Diagnostico reciente", null, null));
+        LocalDateTime fechaReferencia =
+                LocalDateTime.of(2026, Month.JULY, 16, 10, 0);
+
+        HistoriaClinica historiaAntigua =
+                new HistoriaClinica(
+                        paciente,
+                        doctor,
+                        "Diagnostico antiguo",
+                        null,
+                        null
+                );
+        historiaAntigua.setFechaCreacion(fechaReferencia.minusDays(1));
+
+        HistoriaClinica historiaReciente =
+                new HistoriaClinica(
+                        paciente,
+                        doctor,
+                        "Diagnostico reciente",
+                        null,
+                        null
+                );
+        historiaReciente.setFechaCreacion(fechaReferencia);
+
+        historiaRepository.saveAllAndFlush(
+                List.of(historiaAntigua, historiaReciente)
+        );
 
         mockMvc.perform(get("/api/historias-clinicas"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[0].diagnostico", is("Diagnostico reciente")))
-                .andExpect(jsonPath("$[1].diagnostico", is("Diagnostico antiguo")));
+                .andExpect(jsonPath(
+                        "$[0].diagnostico",
+                        is("Diagnostico reciente")
+                ))
+                .andExpect(jsonPath(
+                        "$[1].diagnostico",
+                        is("Diagnostico antiguo")
+                ));
     }
 
     @Test

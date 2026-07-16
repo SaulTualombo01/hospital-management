@@ -6,7 +6,6 @@ import com.hospital.model.Doctor;
 import com.hospital.repository.DoctorRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import java.util.Arrays;
 import java.util.List;
@@ -29,8 +28,10 @@ class DoctorServiceTest {
 
     @Test
     void listarTodos_debeRetornarListaDeDoctores() {
-        Doctor d1 = new Doctor(); d1.setNombre("Ana");
-        Doctor d2 = new Doctor(); d2.setNombre("Carlos");
+        Doctor d1 = new Doctor();
+        d1.setNombre("Ana");
+        Doctor d2 = new Doctor();
+        d2.setNombre("Carlos");
 
         when(doctorRepository.findAll()).thenReturn(Arrays.asList(d1, d2));
 
@@ -42,7 +43,9 @@ class DoctorServiceTest {
 
     @Test
     void buscarPorId_existente_debeRetornarDoctor() {
-        Doctor d = new Doctor(); d.setId(1L); d.setNombre("Ana");
+        Doctor d = new Doctor();
+        d.setId(1L);
+        d.setNombre("Ana");
         when(doctorRepository.findById(1L)).thenReturn(Optional.of(d));
 
         Doctor resultado = doctorService.buscarPorId(1L);
@@ -68,7 +71,8 @@ class DoctorServiceTest {
         dto.setTelefono("12345");
         dto.setConsultorio("C1");
 
-        Doctor doctorGuardado = new Doctor(); doctorGuardado.setId(1L);
+        Doctor doctorGuardado = new Doctor();
+        doctorGuardado.setId(1L);
 
         when(doctorRepository.save(any(Doctor.class))).thenReturn(doctorGuardado);
 

@@ -16,10 +16,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.Month;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -45,7 +47,7 @@ class PacienteControllerIntegrationTest {
         dtoValido = new PacienteDTO();
         dtoValido.setNombre("Maria");
         dtoValido.setApellido("Lopez");
-        dtoValido.setFechaNacimiento(LocalDate.of(1995, 5, 20));
+        dtoValido.setFechaNacimiento(LocalDate.of(1995, Month.MAY, 20));
         dtoValido.setEmail("maria.lopez@example.com");
         dtoValido.setTelefono("0991234567");
         dtoValido.setDireccion("Av. Amazonas y Naciones Unidas");
@@ -144,7 +146,7 @@ class PacienteControllerIntegrationTest {
     @DisplayName("GET /api/pacientes/{id} - id existente - retorna 200 y el paciente")
     void buscar_idExistente_retornaPaciente() throws Exception {
         Paciente guardado = pacienteRepository.save(
-                new Paciente("Carlos", "Perez", LocalDate.of(1990, 1, 1),
+                new Paciente("Carlos", "Perez", LocalDate.of(1990, Month.JANUARY, 1),
                         "carlos.perez@example.com", "0991112233", "Quito"));
 
         mockMvc.perform(get("/api/pacientes/{id}", guardado.getId()))
@@ -168,13 +170,13 @@ class PacienteControllerIntegrationTest {
     @DisplayName("PUT /api/pacientes/{id} - actualizacion valida - retorna 200 con datos actualizados")
     void actualizar_datosValidos_retornaActualizado() throws Exception {
         Paciente guardado = pacienteRepository.save(
-                new Paciente("Ana", "Torres", LocalDate.of(1988, 3, 15),
+                new Paciente("Ana", "Torres", LocalDate.of(1988, Month.MARCH, 15),
                         "ana.torres@example.com", "0987654321", "Cuenca"));
 
         PacienteDTO actualizacion = new PacienteDTO();
         actualizacion.setNombre("Ana Maria");
         actualizacion.setApellido("Torres");
-        actualizacion.setFechaNacimiento(LocalDate.of(1988, 3, 15));
+        actualizacion.setFechaNacimiento(LocalDate.of(1988, Month.MARCH, 15));
         actualizacion.setEmail("ana.maria@example.com");
         actualizacion.setTelefono("0987654322");
         actualizacion.setDireccion("Cuenca centro");
@@ -194,7 +196,7 @@ class PacienteControllerIntegrationTest {
     @DisplayName("DELETE /api/pacientes/{id} - id existente - elimina (bug: retorna 200 en vez de 204)")
     void eliminar_idExistente_bugDeteccion() throws Exception {
         Paciente guardado = pacienteRepository.save(
-                new Paciente("Luis", "Ramos", LocalDate.of(2000, 7, 7),
+                new Paciente("Luis", "Ramos", LocalDate.of(2000, Month.JULY, 7),
                         "luis.ramos@example.com", "0998887766", "Quito"));
 
         mockMvc.perform(delete("/api/pacientes/{id}", guardado.getId()))
@@ -209,7 +211,7 @@ class PacienteControllerIntegrationTest {
     @Test
     @DisplayName("GET /api/pacientes/buscar?nombre= - nombre existente - retorna coincidencias")
     void buscarPorNombre_nombreExistente_retornaLista() throws Exception {
-        pacienteRepository.save(new Paciente("Patricia", "Salazar", LocalDate.of(1992, 2, 2),
+        pacienteRepository.save(new Paciente("Patricia", "Salazar", LocalDate.of(1992, Month.FEBRUARY, 2),
                 "patricia@example.com", "0991234567", "Quito"));
 
         mockMvc.perform(get("/api/pacientes/buscar").param("nombre", "Patricia"))
