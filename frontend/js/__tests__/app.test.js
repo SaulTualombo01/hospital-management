@@ -1,18 +1,19 @@
-const { loadScript } = require('./testHelpers');
+/* global describe, beforeEach, afterEach, test, expect, jest */
+const {loadScript} = require('./testHelpers');
 
 describe('App', () => {
-  let App;
-  let PacientesAPI;
-  let DoctoresAPI;
-  let CitasAPI;
+    let App;
+    let PacientesAPI;
+    let DoctoresAPI;
+    let CitasAPI;
 
-  beforeEach(() => {
-    // CORRECCIÓN CLAVE 1: Activar el tiempo falso ANTES de cargar el script
-    // Así, cualquier variable global en app.js que use new Date() tomará esta fecha.
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2026-07-08T12:00:00Z'));
+    beforeEach(() => {
+        // CORRECCIÓN CLAVE 1: Activar el tiempo falso ANTES de cargar el script
+        // Así, cualquier variable global en app.js que use new Date() tomará esta fecha.
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date('2026-07-08T12:00:00Z'));
 
-    document.body.innerHTML = `
+        document.body.innerHTML = `
       <button class="nav-btn active" data-section="dashboard">Dashboard</button>
       <button class="nav-btn" data-section="pacientes">Pacientes</button>
       <button class="nav-btn" data-section="doctores">Doctores</button>
@@ -31,86 +32,86 @@ describe('App', () => {
       <div id="stat-edad-promedio"></div>
     `;
 
-    // CORRECCIÓN CLAVE 2: Usamos notación de corchetes para evitar la advertencia
-    // roja de IntelliJ sobre la reasignación de constantes.
-    global['PacientesModule'] = { init: jest.fn().mockResolvedValue() };
-    global['DoctoresModule'] = { init: jest.fn().mockResolvedValue() };
-    global['CitasModule'] = { init: jest.fn().mockResolvedValue() };
-    global['HistoriasModule'] = { init: jest.fn().mockResolvedValue() };
+        // CORRECCIÓN CLAVE 2: Usamos notación de corchetes para evitar la advertencia
+        // roja de IntelliJ sobre la reasignación de constantes.
+        global['PacientesModule'] = {init: jest.fn().mockResolvedValue()};
+        global['DoctoresModule'] = {init: jest.fn().mockResolvedValue()};
+        global['CitasModule'] = {init: jest.fn().mockResolvedValue()};
+        global['HistoriasModule'] = {init: jest.fn().mockResolvedValue()};
 
-    PacientesAPI = {
-      listar: jest.fn().mockResolvedValue([{ id: 1 }, { id: 2 }]),
-      edadPromedio: jest.fn().mockResolvedValue(27.4),
-    };
-    DoctoresAPI = {
-      listar: jest.fn().mockResolvedValue([{ id: 3 }]),
-    };
-    CitasAPI = {
-      listar: jest.fn().mockResolvedValue([
-        { id: 1, fechaHora: '2026-07-08T10:30:00.000Z' },
-        { id: 2, fechaHora: '2026-07-07T10:30:00.000Z' },
-      ]),
-    };
+        PacientesAPI = {
+            listar: jest.fn().mockResolvedValue([{id: 1}, {id: 2}]),
+            edadPromedio: jest.fn().mockResolvedValue(27.4),
+        };
+        DoctoresAPI = {
+            listar: jest.fn().mockResolvedValue([{id: 3}]),
+        };
+        CitasAPI = {
+            listar: jest.fn().mockResolvedValue([
+                {id: 1, fechaHora: '2026-07-08T10:30:00.000Z'},
+                {id: 2, fechaHora: '2026-07-07T10:30:00.000Z'},
+            ]),
+        };
 
-    const loaded = loadScript('app.js', ['App'], {
-      PacientesAPI,
-      DoctoresAPI,
-      CitasAPI,
-      PacientesModule: global['PacientesModule'],
-      DoctoresModule: global['DoctoresModule'],
-      CitasModule: global['CitasModule'],
-      HistoriasModule: global['HistoriasModule'],
+        const loaded = loadScript('app.js', ['App'], {
+            PacientesAPI,
+            DoctoresAPI,
+            CitasAPI,
+            PacientesModule: global['PacientesModule'],
+            DoctoresModule: global['DoctoresModule'],
+            CitasModule: global['CitasModule'],
+            HistoriasModule: global['HistoriasModule'],
+        });
+
+        App = loaded.App;
     });
 
-    App = loaded.App;
-  });
+    // Limpieza vital: restaurar el reloj real después de cada prueba
+    afterEach(() => {
+        jest.useRealTimers();
+    });
 
-  // Limpieza vital: restaurar el reloj real después de cada prueba
-  afterEach(() => {
-    jest.useRealTimers();
-  });
+    test('init llama setupNavigation y carga el dashboard', async () => {
+        App.setupNavigation = jest.fn();
+        App.cargarDashboard = jest.fn().mockResolvedValue();
 
-  test('init llama setupNavigation y carga el dashboard', async () => {
-    App.setupNavigation = jest.fn();
-    App.cargarDashboard = jest.fn().mockResolvedValue();
+        await App.init();
 
-    await App.init();
+        expect(App.setupNavigation).toHaveBeenCalled();
+        expect(App.cargarDashboard).toHaveBeenCalled();
+    });
 
-    expect(App.setupNavigation).toHaveBeenCalled();
-    expect(App.cargarDashboard).toHaveBeenCalled();
-  });
+    test('navegarA activa la seccion correcta y llama al modulo correspondiente', async () => {
+        App.cargarDashboard = jest.fn().mockResolvedValue();
 
-  test('navegarA activa la seccion correcta y llama al modulo correspondiente', async () => {
-    App.cargarDashboard = jest.fn().mockResolvedValue();
+        await App.navegarA('pacientes');
 
-    await App.navegarA('pacientes');
+        expect(App.currentSection).toBe('pacientes');
+        expect(document.querySelector('[data-section="pacientes"]').classList.contains('active')).toBe(true);
+        expect(document.querySelector('#section-pacientes').classList.contains('active')).toBe(true);
+        expect(global['PacientesModule'].init).toHaveBeenCalled();
+    });
 
-    expect(App.currentSection).toBe('pacientes');
-    expect(document.querySelector('[data-section="pacientes"]').classList.contains('active')).toBe(true);
-    expect(document.querySelector('#section-pacientes').classList.contains('active')).toBe(true);
-    expect(global['PacientesModule'].init).toHaveBeenCalled();
-  });
+    test('cargarDashboard actualiza las estadisticas con los datos recibidos', async () => {
+        // Ya no encendemos el fakeTimer aquí porque se encendió en el beforeEach
+        await App.cargarDashboard();
 
-  test('cargarDashboard actualiza las estadisticas con los datos recibidos', async () => {
-    // Ya no encendemos el fakeTimer aquí porque se encendió en el beforeEach
-    await App.cargarDashboard();
+        expect(PacientesAPI.listar).toHaveBeenCalled();
+        expect(DoctoresAPI.listar).toHaveBeenCalled();
+        expect(CitasAPI.listar).toHaveBeenCalled();
+        expect(document.getElementById('stat-total-pacientes').textContent).toBe('2');
+        expect(document.getElementById('stat-total-doctores').textContent).toBe('1');
+        expect(document.getElementById('stat-citas-hoy').textContent).toBe('1');
+        expect(document.getElementById('stat-edad-promedio').textContent).toBe('27.4 años');
+    });
 
-    expect(PacientesAPI.listar).toHaveBeenCalled();
-    expect(DoctoresAPI.listar).toHaveBeenCalled();
-    expect(CitasAPI.listar).toHaveBeenCalled();
-    expect(document.getElementById('stat-total-pacientes').textContent).toBe('2');
-    expect(document.getElementById('stat-total-doctores').textContent).toBe('1');
-    expect(document.getElementById('stat-citas-hoy').textContent).toBe('1');
-    expect(document.getElementById('stat-edad-promedio').textContent).toBe('27.4 años');
-  });
+    test('setupNavigation adjunta el manejador de click sobre los botones', () => {
+        App.navegarA = jest.fn();
 
-  test('setupNavigation adjunta el manejador de click sobre los botones', () => {
-    App.navegarA = jest.fn();
+        App.setupNavigation();
 
-    App.setupNavigation();
+        document.querySelector('[data-section="citas"]').click();
 
-    document.querySelector('[data-section="citas"]').click();
-
-    expect(App.navegarA).toHaveBeenCalledWith('citas');
-  });
+        expect(App.navegarA).toHaveBeenCalledWith('citas');
+    });
 });
