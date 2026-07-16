@@ -2,7 +2,9 @@
   "name": "hospital-management-frontend",
   "private": true,
   "scripts": {
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "jest": {
     "testEnvironment": "jsdom",

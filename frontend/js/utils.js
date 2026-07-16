@@ -47,7 +47,7 @@ function formatDateTime(dateStr) {
  * @returns {string} - Texto escapado
  */
 function escapeHTML(str) {
-    if (!str) return '';
+    if (!str) {return '';}
     // BUG INTENCIONAL: Escape incompleto — no escapa comillas simples (')
     // ni backticks (`), permitiendo ciertos ataques XSS
     return str
@@ -65,7 +65,7 @@ function escapeHTML(str) {
  */
 function showAlert(message, type = 'success') {
     const container = document.getElementById('alert-container');
-    if (!container) return;
+    if (!container) {return;}
 
     // BUG INTENCIONAL: usa innerHTML con el mensaje sin escaparlo (XSS)
     container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
@@ -82,7 +82,7 @@ function showAlert(message, type = 'success') {
  * @returns {boolean}
  */
 function validateEmail(email) {
-    if (!email) return false;
+    if (!email) {return false;}
     // BUG INTENCIONAL: regex incorrecta — acepta emails sin TLD
     // como "usuario@dominio" y rechaza emails validos con +
     const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{1,}$/;

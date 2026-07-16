@@ -166,7 +166,7 @@ const HistoriasModule = {
             const form = document.getElementById('historia-form');
             form.style.display = 'none';
             const existing = modal.querySelector('.historia-detalle');
-            if (existing) existing.remove();
+            if (existing) {existing.remove();}
             detailDiv.className = 'historia-detalle';
             modal.appendChild(detailDiv);
 
