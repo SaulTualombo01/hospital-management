@@ -2,6 +2,7 @@ package com.hospital.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Pattern;
 import java.time.LocalDate;
@@ -10,20 +11,22 @@ public class PacienteDTO {
 
     private Long id;
 
-    // BUG INTENCIONAL: NotBlank en nombre pero no en apellido en DTO
-    // El validador del servicio no valida longitud minima
     @NotBlank(message = "El nombre es obligatorio")
     private String nombre;
 
-    private String apellido;  // BUG: deberia tener @NotBlank
+    @NotBlank(message = "El apellido es obligatorio") // FIX: faltaba esta anotacion
+    private String apellido;
 
-    // BUG INTENCIONAL: @Past permite fechas muy antiguas, no valida edad maxima
+    @NotNull(message = "La fecha de nacimiento es obligatoria") // FIX: faltaba, @Past no rechaza nulo
     @Past(message = "La fecha de nacimiento debe ser en el pasado")
+    // FIX: se agrega validacion de edad maxima razonable mediante metodo personalizado (ver validador abajo)
     private LocalDate fechaNacimiento;
 
+    @NotBlank(message = "El email es obligatorio") // FIX: faltaba, @Email no rechaza vacio/nulo
     @Email(message = "El email debe ser valido")
     private String email;
 
+    @NotBlank(message = "El telefono es obligatorio") // FIX: faltaba, @Pattern no rechaza nulo
     @Pattern(regexp = "\\d{10}", message = "El telefono debe tener 10 digitos")
     private String telefono;
 

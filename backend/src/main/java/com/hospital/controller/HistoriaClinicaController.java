@@ -6,6 +6,7 @@ import com.hospital.service.HistoriaClinicaService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 
@@ -31,8 +32,13 @@ public class HistoriaClinicaController {
     }
 
     @PostMapping
-    public ResponseEntity<HistoriaClinica> crear(@Valid @RequestBody HistoriaClinicaDTO dto) {
-        return ResponseEntity.ok(historiaService.crear(dto)); // BUG: 200 en vez de 201
+    public ResponseEntity<HistoriaClinica> crear(@Valid @RequestBody HistoriaClinicaDTO dto,
+                                                 UriComponentsBuilder uriBuilder) {
+        HistoriaClinica creada = historiaService.crear(dto);
+        // FIX: se retorna 201 Created con header Location, en vez de 200 OK
+        return ResponseEntity
+                .created(uriBuilder.path("/api/historias-clinicas/{id}").buildAndExpand(creada.getId()).toUri())
+                .body(creada);
     }
 
     @GetMapping("/paciente/{pacienteId}")

@@ -3,23 +3,24 @@ package com.hospital.service;
 import com.hospital.dto.DoctorDTO;
 import com.hospital.exception.ResourceNotFoundException;
 import com.hospital.model.Doctor;
+import com.hospital.repository.CitaRepository;
 import com.hospital.repository.DoctorRepository;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
 @Service
+@Transactional(readOnly = true) // FIX: se agrega @Transactional a nivel de clase, solo lectura por defecto
 public class DoctorService {
 
     private final DoctorRepository doctorRepository;
+    private final CitaRepository citaRepository; // FIX: se necesita para validar citas activas antes de eliminar
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
-    public DoctorService(DoctorRepository doctorRepository) {
+    public DoctorService(DoctorRepository doctorRepository, CitaRepository citaRepository) {
         this.doctorRepository = doctorRepository;
+        this.citaRepository = citaRepository;
     }
 
     public List<Doctor> listarTodos() {
@@ -31,13 +32,26 @@ public class DoctorService {
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor no encontrado con ID: " + id));
     }
 
+    @Transactional // FIX: operacion de escritura, con rollback si falla
     public Doctor crear(DoctorDTO dto) {
+        // FIX: se valida que el email no este ya registrado por otro doctor
+        if (doctorRepository.existsByEmail(dto.getEmail())) {
+            throw new IllegalArgumentException("Ya existe un doctor registrado con el email: " + dto.getEmail());
+        }
+
         Doctor doctor = toEntity(dto);
         return doctorRepository.save(doctor);
     }
 
+    @Transactional // FIX: operacion de escritura, con rollback si falla
     public Doctor actualizar(Long id, DoctorDTO dto) {
         Doctor doctor = buscarPorId(id);
+
+        // FIX: se valida que el nuevo email no pertenezca a OTRO doctor distinto
+        if (!doctor.getEmail().equals(dto.getEmail()) && doctorRepository.existsByEmail(dto.getEmail())) {
+            throw new IllegalArgumentException("Ya existe un doctor registrado con el email: " + dto.getEmail());
+        }
+
         doctor.setNombre(dto.getNombre());
         doctor.setApellido(dto.getApellido());
         doctor.setEspecialidad(dto.getEspecialidad());
@@ -47,26 +61,38 @@ public class DoctorService {
         return doctorRepository.save(doctor);
     }
 
+    @Transactional // FIX: operacion de escritura, con rollback si falla
     public void eliminar(Long id) {
-        // BUG INTENCIONAL: no verifica si el doctor tiene citas activas antes de eliminar
+        // FIX: se verifica existencia antes de eliminar, para poder devolver 404 si no existe
+        if (!doctorRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Doctor no encontrado con ID: " + id);
+        }
+
+        // FIX: se valida que el doctor no tenga citas activas antes de eliminarlo
+        boolean tieneCitasActivas = citaRepository.existsByDoctorIdAndEstado(id, "PROGRAMADA");
+        if (tieneCitasActivas) {
+            throw new IllegalArgumentException(
+                    "No se puede eliminar el doctor porque tiene citas activas programadas");
+        }
+
         doctorRepository.deleteById(id);
     }
 
-    // BUG INTENCIONAL: SQL Injection — construye query concatenando strings
-    // Esta es una vulnerabilidad real de inyeccion SQL
+    // FIX: se elimina el metodo inseguro que concatenaba strings (SQL Injection)
+    // y se usa siempre la version segura con Spring Data JPA (query parametrizada)
     public List<Doctor> buscarPorEspecialidadInsegura(String especialidad) {
-        String sql = "SELECT * FROM doctores WHERE especialidad ILIKE '%" + especialidad + "%'";
-        jakarta.persistence.Query query = entityManager.createNativeQuery(sql, Doctor.class);
-        return query.getResultList();
+        return doctorRepository.findByEspecialidadContainingIgnoreCase(especialidad);
     }
 
-    // Version segura del mismo metodo (para que los estudiantes comparen)
     public List<Doctor> buscarPorEspecialidad(String especialidad) {
         return doctorRepository.findByEspecialidadContainingIgnoreCase(especialidad);
     }
 
-    // BUG INTENCIONAL: No hay validacion de que nombre/apellido no esten vacios
+    // FIX: se valida que nombre y apellido no esten vacios antes de consultar
     public List<Doctor> buscarPorNombreCompleto(String nombre, String apellido) {
+        if (!StringUtils.hasText(nombre) || !StringUtils.hasText(apellido)) {
+            throw new IllegalArgumentException("El nombre y el apellido son obligatorios para la busqueda");
+        }
         return doctorRepository.findByNombreAndApellido(nombre, apellido);
     }
 

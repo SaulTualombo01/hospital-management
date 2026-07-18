@@ -29,8 +29,12 @@ public class PacienteService {
     }
 
     public Paciente crear(PacienteDTO dto) {
+        // FIX: se valida que el email no este ya registrado
+        if (pacienteRepository.findByEmail(dto.getEmail()).isPresent()) {
+            throw new IllegalArgumentException("Ya existe un paciente registrado con el email: " + dto.getEmail());
+        }
+
         Paciente paciente = toEntity(dto);
-        // BUG INTENCIONAL: No valida si el email ya existe antes de guardar
         return pacienteRepository.save(paciente);
     }
 
@@ -63,9 +67,14 @@ public class PacienteService {
     }
 
     public Paciente buscarPorEmail(String email) {
-        // BUG INTENCIONAL: no valida si email es null o vacio
-        // Tampoco maneja el caso de multiples resultados
-        return pacienteRepository.findByEmail(email);
+        // FIX: se valida que el email no sea nulo/vacio antes de consultar
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("El email no puede estar vacio");
+        }
+
+        // FIX: se maneja explicitamente el caso de ausencia de resultado con Optional
+        return pacienteRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado con email: " + email));
     }
 
     public double calcularEdadPromedio() {

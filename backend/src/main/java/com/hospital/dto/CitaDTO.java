@@ -1,7 +1,10 @@
 package com.hospital.dto;
 
-import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 public class CitaDTO {
@@ -9,17 +12,21 @@ public class CitaDTO {
     private Long id;
 
     @NotNull(message = "El ID del paciente es obligatorio")
+    @Positive(message = "El ID del paciente debe ser un valor positivo") // FIX: faltaba esta anotacion
     private Long pacienteId;
 
     @NotNull(message = "El ID del doctor es obligatorio")
+    @Positive(message = "El ID del doctor debe ser un valor positivo") // FIX: faltaba esta anotacion
     private Long doctorId;
 
-    // BUG INTENCIONAL: @Future impide crear citas con fecha actual (deberia ser @FutureOrPresent)
     @NotNull(message = "La fecha y hora es obligatoria")
-    @Future(message = "La fecha debe ser futura")
+    @FutureOrPresent(message = "La fecha no puede ser anterior al momento actual") // FIX: antes era @Future
     private LocalDateTime fechaHora;
 
+    @NotBlank(message = "El motivo es obligatorio") // FIX: faltaba esta anotacion
+    @Size(max = 255, message = "El motivo no puede exceder 255 caracteres") // FIX: faltaba esta anotacion
     private String motivo;
+
     private String estado = "PROGRAMADA";
 
     public CitaDTO() {}

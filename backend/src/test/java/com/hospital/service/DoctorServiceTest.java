@@ -3,6 +3,7 @@ package com.hospital.service;
 import com.hospital.dto.DoctorDTO;
 import com.hospital.exception.ResourceNotFoundException;
 import com.hospital.model.Doctor;
+import com.hospital.repository.CitaRepository;
 import com.hospital.repository.DoctorRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,12 +19,14 @@ import static org.mockito.Mockito.*;
 class DoctorServiceTest {
 
     private DoctorRepository doctorRepository;
+    private CitaRepository  citaRepository;
     private DoctorService doctorService;
 
     @BeforeEach
     void setUp() {
         doctorRepository = mock(DoctorRepository.class);
-        doctorService = new DoctorService(doctorRepository);
+        citaRepository = mock(CitaRepository.class);
+        doctorService = new DoctorService(doctorRepository, citaRepository);
     }
 
     @Test

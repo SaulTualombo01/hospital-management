@@ -6,6 +6,7 @@ import com.hospital.service.PacienteService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 
@@ -31,10 +32,11 @@ public class PacienteController {
     }
 
     @PostMapping
-    public ResponseEntity<Paciente> crear(@Valid @RequestBody PacienteDTO dto) {
+    public ResponseEntity<Paciente> crear(@Valid @RequestBody PacienteDTO dto, UriComponentsBuilder uriBuilder) {
         Paciente creado = pacienteService.crear(dto);
-        // BUG INTENCIONAL: retorna 200 OK en vez de 201 Created
-        return ResponseEntity.ok(creado);
+        // FIX: ahora retorna 201 Created con header Location (antes retornaba 200 OK)
+        var location = uriBuilder.path("/api/pacientes/{id}").buildAndExpand(creado.getId()).toUri();
+        return ResponseEntity.created(location).body(creado);
     }
 
     @PutMapping("/{id}")
@@ -45,8 +47,8 @@ public class PacienteController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         pacienteService.eliminar(id);
-        // BUG INTENCIONAL: no retorna 204 No Content, retorna 200 OK
-        return ResponseEntity.ok().build();
+        // FIX: ahora retorna 204 No Content (antes retornaba 200 OK)
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/buscar")

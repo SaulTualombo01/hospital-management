@@ -155,7 +155,7 @@ class PacienteServiceTest {
     @Test
     void buscarPorEmailDebeDelegarEnRepositorio() {
         Paciente paciente = crearPaciente("Ana", "Lopez", LocalDate.of(1995, Month.JANUARY, 10));
-        when(pacienteRepository.findByEmail("ana@test.com")).thenReturn(paciente);
+        when(pacienteRepository.findByEmail("ana@test.com")).thenReturn(Optional.of(paciente));
 
         Paciente resultado = pacienteService.buscarPorEmail("ana@test.com");
 

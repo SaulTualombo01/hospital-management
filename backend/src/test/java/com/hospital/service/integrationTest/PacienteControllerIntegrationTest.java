@@ -57,12 +57,83 @@ class PacienteControllerIntegrationTest {
     // ---------- POST /api/pacientes ----------
 
     @Test
-    @DisplayName("POST /api/pacientes - datos validos - deberia crear y retornar 201")
+    @DisplayName("POST /api/pacientes - nombre nulo - retorna 400")
+    void crear_nombreNulo_retorna400() throws Exception {
+        dtoValido.setNombre(null);
+
+        mockMvc.perform(post("/api/pacientes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.nombre").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/pacientes - email nulo - retorna 400")
+    void crear_emailNulo_retorna400() throws Exception {
+        dtoValido.setEmail(null);
+
+        mockMvc.perform(post("/api/pacientes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.email").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/pacientes - email duplicado - retorna error 4xx")
+    void crear_emailDuplicado_retornaError() throws Exception {
+        pacienteRepository.save(new Paciente("Otro", "Paciente", LocalDate.of(1980, Month.JANUARY, 1),
+                "maria.lopez@example.com", "0990001122", "Quito"));
+
+        mockMvc.perform(post("/api/pacientes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    @DisplayName("POST /api/pacientes - telefono con letras - retorna 400")
+    void crear_telefonoConLetras_retorna400() throws Exception {
+        dtoValido.setTelefono("09876abcde");
+
+        mockMvc.perform(post("/api/pacientes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.telefono").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/pacientes - fecha de nacimiento de hoy (valor limite invalido por @Past) - retorna 400")
+    void crear_fechaNacimientoHoy_retorna400() throws Exception {
+        dtoValido.setFechaNacimiento(LocalDate.now());
+
+        mockMvc.perform(post("/api/pacientes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/pacientes - fecha de nacimiento nula - retorna 400")
+    void crear_fechaNacimientoNula_retorna400() throws Exception {
+        dtoValido.setFechaNacimiento(null);
+
+        mockMvc.perform(post("/api/pacientes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.fechaNacimiento").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/pacientes - datos validos - retorna 201")
     void crear_datosValidos_retorna201() throws Exception {
         mockMvc.perform(post("/api/pacientes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dtoValido)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.nombre", is("Maria")))
                 .andExpect(jsonPath("$.apellido", is("Lopez")));
@@ -81,15 +152,15 @@ class PacienteControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /api/pacientes - apellido vacio - NO deberia pasar (bug: falta @NotBlank en apellido)")
-    void crear_apellidoVacio_bugDeteccion() throws Exception {
+    @DisplayName("POST /api/pacientes - apellido vacio - retorna 400")
+    void crear_apellidoVacio_retorna400() throws Exception {
         dtoValido.setApellido("");
 
         mockMvc.perform(post("/api/pacientes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dtoValido)))
-                .andExpect(status().isOk()) // no isCreated por el otro bug
-                .andExpect(jsonPath("$.apellido", is("")));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.apellido").exists());
     }
 
     @Test
@@ -124,7 +195,7 @@ class PacienteControllerIntegrationTest {
         mockMvc.perform(post("/api/pacientes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dtoValido)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.telefono", is("0987654321")));
     }
 
@@ -156,14 +227,28 @@ class PacienteControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("GET /api/pacientes/{id} - id inexistente - el controlador documenta bug: retorna 200 en vez de 404")
-    void buscar_idInexistente_bugDeteccion() throws Exception {
+    @DisplayName("GET /api/pacientes/{id} - id inexistente - retorna 404")
+    void buscar_idInexistente_retorna404() throws Exception {
         mockMvc.perform(get("/api/pacientes/{id}", 999999L))
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status", is(404)))
                 .andExpect(jsonPath("$.message", containsString("no encontrado")));
     }
 
+    @Test
+    @DisplayName("GET /api/pacientes/{id} - id no numerico - retorna 400")
+    void buscar_idNoNumerico_retorna400() throws Exception {
+        mockMvc.perform(get("/api/pacientes/{id}", "abc"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("GET /api/pacientes/{id} - id negativo - retorna 404")
+    void buscar_idNegativo_retorna404() throws Exception {
+        mockMvc.perform(get("/api/pacientes/{id}", -1L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)));
+    }
     // ---------- PUT /api/pacientes/{id} ----------
 
     @Test
@@ -190,22 +275,59 @@ class PacienteControllerIntegrationTest {
                 .andExpect(jsonPath("$.email", is("ana.maria@example.com")));
     }
 
+    @Test
+    @DisplayName("PUT /api/pacientes/{id} - id inexistente - retorna 404")
+    void actualizar_idInexistente_retorna404() throws Exception {
+        mockMvc.perform(put("/api/pacientes/{id}", 999999L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PUT /api/pacientes/{id} - email invalido en actualizacion - retorna 400")
+    void actualizar_emailInvalido_retorna400() throws Exception {
+        Paciente guardado = pacienteRepository.save(
+                new Paciente("Jorge", "Vera", LocalDate.of(1985, Month.APRIL, 10),
+                        "jorge.vera@example.com", "0991230000", "Quito"));
+
+        PacienteDTO actualizacion = new PacienteDTO();
+        actualizacion.setNombre("Jorge");
+        actualizacion.setApellido("Vera");
+        actualizacion.setFechaNacimiento(LocalDate.of(1985, Month.APRIL, 10));
+        actualizacion.setEmail("correo-invalido");
+        actualizacion.setTelefono("0991230000");
+        actualizacion.setDireccion("Quito");
+        actualizacion.setActivo(true);
+
+        mockMvc.perform(put("/api/pacientes/{id}", guardado.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(actualizacion)))
+                .andExpect(status().isBadRequest());
+    }
+
     // ---------- DELETE /api/pacientes/{id} ----------
 
     @Test
-    @DisplayName("DELETE /api/pacientes/{id} - id existente - elimina (bug: retorna 200 en vez de 204)")
-    void eliminar_idExistente_bugDeteccion() throws Exception {
+    @DisplayName("DELETE /api/pacientes/{id} - id existente - retorna 204")
+    void eliminar_idExistente_retorna204() throws Exception {
         Paciente guardado = pacienteRepository.save(
                 new Paciente("Luis", "Ramos", LocalDate.of(2000, Month.JULY, 7),
                         "luis.ramos@example.com", "0998887766", "Quito"));
 
         mockMvc.perform(delete("/api/pacientes/{id}", guardado.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         org.junit.jupiter.api.Assertions.assertFalse(
                 pacienteRepository.findById(guardado.getId()).isPresent());
     }
 
+    @Test
+    @DisplayName("DELETE /api/pacientes/{id} - id inexistente - retorna 404")
+    void eliminar_idInexistente_retorna404() throws Exception {
+        mockMvc.perform(delete("/api/pacientes/{id}", 999999L))
+                .andExpect(status().isNotFound());
+    }
     // ---------- GET /api/pacientes/buscar ----------
 
     @Test
@@ -218,6 +340,25 @@ class PacienteControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(greaterThanOrEqualTo(1))))
                 .andExpect(jsonPath("$[0].nombre", is("Patricia")));
+    }
+
+    @Test
+    @DisplayName("GET /api/pacientes - lista con datos - retorna 200 con pacientes")
+    void listar_conDatos_retornaLista() throws Exception {
+        pacienteRepository.save(new Paciente("Elena", "Rios", LocalDate.of(1995, Month.JUNE, 1),
+                "elena.rios@example.com", "0991230011", "Quito"));
+
+        mockMvc.perform(get("/api/pacientes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)));
+    }
+
+    @Test
+    @DisplayName("GET /api/pacientes - sin datos - retorna 200 con lista vacia")
+    void listar_sinDatos_retornaListaVacia() throws Exception {
+        mockMvc.perform(get("/api/pacientes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test

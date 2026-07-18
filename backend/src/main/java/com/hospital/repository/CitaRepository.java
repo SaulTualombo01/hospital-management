@@ -14,15 +14,20 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
 
     List<Cita> findByPacienteId(Long pacienteId);
 
-    List<Cita> findByDoctorId(Long doctorId);
+    // FIX: version con JOIN FETCH para traer el doctor en la misma consulta y evitar N+1
+    @Query("SELECT c FROM Cita c JOIN FETCH c.doctor WHERE c.doctor.id = :doctorId")
+    List<Cita> findByDoctorId(@Param("doctorId") Long doctorId);
 
     List<Cita> findByEstado(String estado);
 
-    // BUG INTENCIONAL: N+1 query — no usa JOIN FETCH para cargar el doctor
-    // Cuando se llame desde el servicio, cada cita hara una consulta separada para doctor
     List<Cita> findByFechaHoraBetween(LocalDateTime inicio, LocalDateTime fin);
 
-    // BUG: esta query JPQL hace join implicito pero sin FETCH, generando N+1
-    @Query("SELECT c FROM Cita c WHERE c.estado = :estado ORDER BY c.fechaHora")
+    // FIX: se agrega JOIN FETCH para traer el doctor en la misma consulta y evitar N+1
+    @Query("SELECT c FROM Cita c JOIN FETCH c.doctor WHERE c.estado = :estado ORDER BY c.fechaHora")
     List<Cita> findCitasByEstadoOrdered(@Param("estado") String estado);
+
+    // FIX: metodo nuevo para validar conflicto de horario (doble booking) antes de crear una cita
+    boolean existsByDoctorIdAndFechaHora(Long doctorId, LocalDateTime fechaHora);
+
+    boolean existsByDoctorIdAndEstado(Long doctorId, String estado);
 }

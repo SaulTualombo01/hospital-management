@@ -86,7 +86,7 @@ class HistoriaClinicaControllerIntegrationTest {
         mockMvc.perform(post("/api/historias-clinicas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dtoValido)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.doctor").doesNotExist());
     }
 
@@ -115,14 +115,14 @@ class HistoriaClinicaControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /api/historias-clinicas - paciente inexistente - bug: retorna 200 en vez de 404")
-    void crear_pacienteInexistente_bugDeteccion() throws Exception {
+    @DisplayName("POST /api/historias-clinicas - paciente inexistente - retorna 404")
+    void crear_pacienteInexistente_retorna404() throws Exception {
         dtoValido.setPacienteId(999999L);
 
         mockMvc.perform(post("/api/historias-clinicas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dtoValido)))
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status", is(404)))
                 .andExpect(jsonPath("$.message", containsString("Paciente no encontrado")));
     }
@@ -135,7 +135,7 @@ class HistoriaClinicaControllerIntegrationTest {
         mockMvc.perform(post("/api/historias-clinicas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dtoValido)))
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status", is(404)))
                 .andExpect(jsonPath("$.message", containsString("Doctor no encontrado")));
     }
@@ -149,7 +149,7 @@ class HistoriaClinicaControllerIntegrationTest {
         mockMvc.perform(post("/api/historias-clinicas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dtoValido)))
-                .andExpect(status().isOk()) // ver bug 200 vs 201
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.diagnostico", is(payloadXss)));
 
         HistoriaClinica guardada = historiaRepository.findAll().stream()
@@ -159,7 +159,54 @@ class HistoriaClinicaControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertEquals(payloadXss, guardada.getDiagnostico());
     }
 
+    @Test
+    @DisplayName("POST /api/historias-clinicas - diagnostico nulo - retorna 400")
+    void crear_diagnosticoNulo_retorna400() throws Exception {
+        dtoValido.setDiagnostico(null);
+
+        mockMvc.perform(post("/api/historias-clinicas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.diagnostico").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/historias-clinicas - diagnostico excede longitud maxima - retorna 400")
+    void crear_diagnosticoExcedeLongitud_retorna400() throws Exception {
+        dtoValido.setDiagnostico("A".repeat(1001)); // ajustar segun el @Size real del DTO
+
+        mockMvc.perform(post("/api/historias-clinicas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/historias-clinicas - datos validos - retorna 201")
+    void crear_datosValidos_retorna201() throws Exception {
+        mockMvc.perform(post("/api/historias-clinicas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.diagnostico", is("Gripe comun")));
+    }
     // ---------- GET /api/historias-clinicas/{id} ----------
+    @Test
+    @DisplayName("GET /api/historias-clinicas/{id} - id no numerico - retorna 400")
+    void buscar_idNoNumerico_retorna400() throws Exception {
+        mockMvc.perform(get("/api/historias-clinicas/{id}", "abc"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("GET /api/historias-clinicas/{id} - id negativo - retorna 404")
+    void buscar_idNegativo_retorna404() throws Exception {
+        mockMvc.perform(get("/api/historias-clinicas/{id}", -1L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)));
+    }
 
     @Test
     @DisplayName("GET /api/historias-clinicas/{id} - id existente - retorna 200 con la historia")
@@ -173,10 +220,10 @@ class HistoriaClinicaControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("GET /api/historias-clinicas/{id} - id inexistente - bug: retorna 200 en vez de 404")
-    void buscar_idInexistente_bugDeteccion() throws Exception {
+    @DisplayName("GET /api/historias-clinicas/{id} - id inexistente - retorna 404")
+    void buscar_idInexistente_retorna404() throws Exception {
         mockMvc.perform(get("/api/historias-clinicas/{id}", 999999L))
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status", is(404)));
     }
 
@@ -254,7 +301,21 @@ class HistoriaClinicaControllerIntegrationTest {
     }
 
     // ---------- GET /api/historias-clinicas/doctor/{doctorId} ----------
+    @Test
+    @DisplayName("GET /api/historias-clinicas/doctor/{id} - doctor sin historias - retorna lista vacia")
+    void listarPorDoctor_sinHistorias_retornaListaVacia() throws Exception {
+        mockMvc.perform(get("/api/historias-clinicas/doctor/{doctorId}", doctor.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
 
+    @Test
+    @DisplayName("GET /api/historias-clinicas/doctor/{id} - doctor inexistente - retorna lista vacia")
+    void listarPorDoctor_doctorInexistente_retornaListaVacia() throws Exception {
+        mockMvc.perform(get("/api/historias-clinicas/doctor/{doctorId}", 999999L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
     @Test
     @DisplayName("GET /api/historias-clinicas/doctor/{id} - doctor con historias - retorna lista")
     void listarPorDoctor_conHistorias_retornaLista() throws Exception {

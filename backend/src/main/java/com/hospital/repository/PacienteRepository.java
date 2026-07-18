@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PacienteRepository extends JpaRepository<Paciente, Long> {
@@ -19,6 +20,6 @@ public interface PacienteRepository extends JpaRepository<Paciente, Long> {
 
     List<Paciente> findByActivoTrue();
 
-    // BUG: este metodo no tiene manejo de null en el servicio que lo usa
-    Paciente findByEmail(String email);
+    // FIX: se envuelve en Optional para forzar manejo expl[icito de ausencia de resultado
+    Optional<Paciente> findByEmail(String email);
 }

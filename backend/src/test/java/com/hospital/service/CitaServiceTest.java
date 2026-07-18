@@ -4,8 +4,10 @@ import com.hospital.dto.CitaDTO;
 import com.hospital.exception.ResourceNotFoundException;
 import com.hospital.model.Cita;
 import com.hospital.model.Doctor;
+import com.hospital.model.Paciente;
 import com.hospital.repository.CitaRepository;
 import com.hospital.repository.DoctorRepository;
+import com.hospital.repository.PacienteRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -21,13 +23,15 @@ class CitaServiceTest {
 
     private CitaRepository citaRepository;
     private DoctorRepository doctorRepository;
+    private PacienteRepository pacienteRepository;
     private CitaService citaService;
 
     @BeforeEach
     void setUp() {
         citaRepository = mock(CitaRepository.class);
         doctorRepository = mock(DoctorRepository.class);
-        citaService = new CitaService(citaRepository, doctorRepository);
+        pacienteRepository = mock(PacienteRepository.class);
+        citaService = new CitaService(citaRepository, doctorRepository, pacienteRepository);
     }
 
     @Test
