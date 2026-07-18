@@ -84,21 +84,20 @@ class CitaControllerIntegrationTest {
         mockMvc.perform(post("/api/citas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dtoValido)))
-                // CORRECCIÓN:  isCreated() por isOk() para coincidir con el controlador
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.estado", is("PROGRAMADA")));
     }
 
     @Test
-    @DisplayName("POST /api/citas - doctorId inexistente - retorna 404 (o 200 por el bug del handler)")
-    void crear_doctorInexistente_retornaError() throws Exception {
+    @DisplayName("POST /api/citas - doctorId inexistente - retorna 404")
+    void crear_doctorInexistente_retorna404() throws Exception {
         dtoValido.setDoctorId(999999L);
 
         mockMvc.perform(post("/api/citas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dtoValido)))
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status", is(404)))
                 .andExpect(jsonPath("$.message", containsString("Doctor no encontrado")));
     }
@@ -139,32 +138,21 @@ class CitaControllerIntegrationTest {
     }
 
 
-    /*
-     * Las pruebas de integración automatizadas revelaron una nueva vulnerabilidad lógica:
-     * el controlador de Citas no valida explícitamente en la base de datos si el pacienteId
-     * existe antes de hacer el guardado. Esto demuestra la importancia de las pruebas de
-     * regresión, ya que arreglar un defecto arquitectónico sacó a la luz una carencia de
-     * validación en la capa de negocio.
-     */
-
     @Test
-    @DisplayName("POST /api/citas - paciente inexistente - bug: no valida existencia y retorna 200 en lugar de 400/404")
-    void crear_pacienteInexistente_bugDeteccion() throws Exception {
+    @DisplayName("POST /api/citas - paciente inexistente - retorna 404")
+    void crear_pacienteInexistente_retorna404() throws Exception {
         dtoValido.setPacienteId(999999L);
 
         mockMvc.perform(post("/api/citas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dtoValido)))
-                //  Ahora el sistema falla de manera silenciosa
-                // aceptando el ID falso y retornando 200 OK.
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.pacienteId", is(999999)));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", containsString("Paciente no encontrado")));
     }
 
     @Test
     @DisplayName("POST /api/citas - doble reserva mismo doctor y hora - bug: no valida conflicto de horario")
     void crear_dobleBookingMismoDoctor_bugDeteccion() throws Exception {
-        // Primera cita
         mockMvc.perform(post("/api/citas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dtoValido)))
@@ -185,6 +173,75 @@ class CitaControllerIntegrationTest {
         org.junit.jupiter.api.Assertions.assertEquals(
                 2, citaRepository.findByDoctorId(doctor.getId()).size());
     }
+    @Test
+    @DisplayName("POST /api/citas - doctorId nulo - retorna 400")
+    void crear_doctorIdNulo_retorna400() throws Exception {
+        dtoValido.setDoctorId(null);
+
+        mockMvc.perform(post("/api/citas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.doctorId").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/citas - pacienteId negativo - retorna 400")
+    void crear_pacienteIdNegativo_retorna400() throws Exception {
+        dtoValido.setPacienteId(-1L);
+
+        mockMvc.perform(post("/api/citas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/citas - motivo vacio - retorna 400")
+    void crear_motivoVacio_retorna400() throws Exception {
+        dtoValido.setMotivo("");
+
+        mockMvc.perform(post("/api/citas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.motivo").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/citas - motivo nulo - retorna 400")
+    void crear_motivoNulo_retorna400() throws Exception {
+        dtoValido.setMotivo(null);
+
+        mockMvc.perform(post("/api/citas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.motivo").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/citas - motivo excede longitud maxima - retorna 400")
+    void crear_motivoExcedeLongitud_retorna400() throws Exception {
+        dtoValido.setMotivo("A".repeat(300)); // ajustar segun el @Size real del DTO
+
+        mockMvc.perform(post("/api/citas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/citas - fechaHora nula - retorna 400")
+    void crear_fechaHoraNula_retorna400() throws Exception {
+        dtoValido.setFechaHora(null);
+
+        mockMvc.perform(post("/api/citas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dtoValido)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.fechaHora").exists());
+    }
 
     // ---------- GET /api/citas/{id} ----------
 
@@ -200,10 +257,25 @@ class CitaControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("GET /api/citas/{id} - id inexistente - bug: retorna 200 en vez de 404")
-    void buscar_idInexistente_bugDeteccion() throws Exception {
+    @DisplayName("GET /api/citas/{id} - id inexistente - retorna 404")
+    void buscar_idInexistente_retorna404() throws Exception {
         mockMvc.perform(get("/api/citas/{id}", 999999L))
-                .andExpect(status().isOk())
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status", is(404)));
+    }
+
+    @Test
+    @DisplayName("GET /api/citas/{id} - id no numerico - retorna 400")
+    void buscar_idNoNumerico_retorna400() throws Exception {
+        mockMvc.perform(get("/api/citas/{id}", "abc"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("GET /api/citas/{id} - id negativo - retorna 404")
+    void buscar_idNegativo_retorna404() throws Exception {
+        mockMvc.perform(get("/api/citas/{id}", -1L))
+                .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status", is(404)));
     }
 
@@ -230,19 +302,79 @@ class CitaControllerIntegrationTest {
                 .andExpect(jsonPath("$.estado", is("CONFIRMADA")));
     }
 
+    @Test
+    @DisplayName("PUT /api/citas/{id} - id inexistente - retorna 404")
+    void actualizar_idInexistente_retorna404() throws Exception {
+        CitaDTO actualizacion = new CitaDTO();
+        actualizacion.setPacienteId(paciente.getId());
+        actualizacion.setDoctorId(doctor.getId());
+        actualizacion.setFechaHora(LocalDateTime.now().plusDays(3));
+        actualizacion.setMotivo("Motivo actualizado");
+        actualizacion.setEstado("CONFIRMADA");
+
+        mockMvc.perform(put("/api/citas/{id}", 999999L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(actualizacion)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PUT /api/citas/{id} - pacienteId nulo en actualizacion - retorna 400")
+    void actualizar_pacienteIdNulo_retorna400() throws Exception {
+        Cita cita = citaRepository.save(
+                new Cita(paciente.getId(), doctor, LocalDateTime.now().plusDays(1), "Motivo original", "PROGRAMADA"));
+
+        CitaDTO actualizacion = new CitaDTO();
+        actualizacion.setPacienteId(null);
+        actualizacion.setDoctorId(doctor.getId());
+        actualizacion.setFechaHora(LocalDateTime.now().plusDays(3));
+        actualizacion.setMotivo("Motivo actualizado");
+        actualizacion.setEstado("CONFIRMADA");
+
+        mockMvc.perform(put("/api/citas/{id}", cita.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(actualizacion)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /api/citas/{id} - fecha pasada en actualizacion - retorna 400")
+    void actualizar_fechaPasada_retorna400() throws Exception {
+        Cita cita = citaRepository.save(
+                new Cita(paciente.getId(), doctor, LocalDateTime.now().plusDays(1), "Motivo original", "PROGRAMADA"));
+
+        CitaDTO actualizacion = new CitaDTO();
+        actualizacion.setPacienteId(paciente.getId());
+        actualizacion.setDoctorId(doctor.getId());
+        actualizacion.setFechaHora(LocalDateTime.now().minusDays(1));
+        actualizacion.setMotivo("Motivo actualizado");
+        actualizacion.setEstado("CONFIRMADA");
+
+        mockMvc.perform(put("/api/citas/{id}", cita.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(actualizacion)))
+                .andExpect(status().isBadRequest());
+    }
+
     // ---------- DELETE /api/citas/{id} ----------
 
     @Test
-    @DisplayName("DELETE /api/citas/{id} - elimina correctamente (bug: 200 en vez de 204)")
-    void eliminar_idExistente_bugDeteccion() throws Exception {
+    @DisplayName("DELETE /api/citas/{id} - elimina correctamente - retorna 204")
+    void eliminar_idExistente_retorna204() throws Exception {
         Cita cita = citaRepository.save(
                 new Cita(paciente.getId(), doctor, LocalDateTime.now().plusDays(1), "A eliminar", "PROGRAMADA"));
 
         mockMvc.perform(delete("/api/citas/{id}", cita.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         org.junit.jupiter.api.Assertions.assertFalse(
                 citaRepository.findById(cita.getId()).isPresent());
+    }
+    @Test
+    @DisplayName("DELETE /api/citas/{id} - id inexistente - retorna 404")
+    void eliminar_idInexistente_retorna404() throws Exception {
+        mockMvc.perform(delete("/api/citas/{id}", 999999L))
+                .andExpect(status().isNotFound());
     }
 
     // ---------- GET /api/citas/paciente/{pacienteId} ----------
@@ -257,7 +389,21 @@ class CitaControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
     }
+    @Test
+    @DisplayName("GET /api/citas/paciente/{id} - paciente sin citas - retorna lista vacia")
+    void listarPorPaciente_sinCitas_retornaListaVacia() throws Exception {
+        mockMvc.perform(get("/api/citas/paciente/{pacienteId}", paciente.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
 
+    @Test
+    @DisplayName("GET /api/citas/paciente/{id} - paciente inexistente - retorna lista vacia")
+    void listarPorPaciente_pacienteInexistente_retornaListaVacia() throws Exception {
+        mockMvc.perform(get("/api/citas/paciente/{pacienteId}", 999999L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
     // ---------- GET /api/citas/doctor/{doctorId} ----------
 
     @Test
@@ -270,7 +416,21 @@ class CitaControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
     }
+    @Test
+    @DisplayName("GET /api/citas/doctor/{id} - doctor sin citas - retorna lista vacia")
+    void listarPorDoctor_sinCitas_retornaListaVacia() throws Exception {
+        mockMvc.perform(get("/api/citas/doctor/{doctorId}", doctor.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
 
+    @Test
+    @DisplayName("GET /api/citas/doctor/{id} - doctor inexistente - retorna lista vacia")
+    void listarPorDoctor_doctorInexistente_retornaListaVacia() throws Exception {
+        mockMvc.perform(get("/api/citas/doctor/{doctorId}", 999999L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
     // ---------- GET /api/citas/estado/{estado} ----------
 
     @Test
@@ -286,7 +446,13 @@ class CitaControllerIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].motivo", is("Primera")));
     }
-
+    @Test
+    @DisplayName("GET /api/citas/estado/{estado} - estado no reconocido - retorna lista vacia")
+    void listarPorEstado_estadoNoReconocido_retornaListaVacia() throws Exception {
+        mockMvc.perform(get("/api/citas/estado/{estado}", "INVENTADO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
     @Test
     @DisplayName("GET /api/citas/estado/{estado} - estado sin citas - retorna lista vacia")
     void listarPorEstado_sinCoincidencias_retornaListaVacia() throws Exception {
@@ -315,17 +481,46 @@ class CitaControllerIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].motivo", is("Dentro del rango")));
     }
+    @Test
+    @DisplayName("GET /api/citas/rango-fechas - fechas iguales - retorna 200 con lista vacia")
+    void listarPorRangoFechas_fechasIguales_retornaListaVacia() throws Exception {
+        String fecha = LocalDateTime.now().format(ISO);
+
+        mockMvc.perform(get("/api/citas/rango-fechas")
+                        .param("inicio", fecha)
+                        .param("fin", fecha))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+    }
 
     @Test
-    @DisplayName("GET /api/citas/rango-fechas - inicio posterior a fin - bug: no valida, retorna 200 con lista vacia")
-    void listarPorRangoFechas_inicioMayorQueFin_bugDeteccion() throws Exception {
+    @DisplayName("GET /api/citas/rango-fechas - formato de fecha invalido - retorna 400")
+    void listarPorRangoFechas_formatoInvalido_retorna400() throws Exception {
+        mockMvc.perform(get("/api/citas/rango-fechas")
+                        .param("inicio", "no-es-una-fecha")
+                        .param("fin", "tampoco"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("GET /api/citas/rango-fechas - parametro faltante - retorna 400")
+    void listarPorRangoFechas_parametroFaltante_retorna400() throws Exception {
+        String inicio = LocalDateTime.now().format(ISO);
+
+        mockMvc.perform(get("/api/citas/rango-fechas")
+                        .param("inicio", inicio))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("GET /api/citas/rango-fechas - inicio posterior a fin - retorna 400")
+    void listarPorRangoFechas_inicioMayorQueFin_retorna400() throws Exception {
         String inicio = LocalDateTime.now().plusDays(5).format(ISO);
         String fin = LocalDateTime.now().format(ISO);
 
         mockMvc.perform(get("/api/citas/rango-fechas")
                         .param("inicio", inicio)
                         .param("fin", fin))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(status().isBadRequest());
     }
 }
