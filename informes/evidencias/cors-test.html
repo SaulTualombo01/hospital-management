@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html><body>
+<pre id="out">Cargando...</pre>
+<script>
+    fetch('http://localhost:8080/api/pacientes')
+        .then(r => r.json())
+        .then(data => document.getElementById('out').innerText = JSON.stringify(data, null, 2))
+        .catch(e => document.getElementById('out').innerText = 'Error: ' + e);
+</script>
+</body></html>
